@@ -1,1 +1,4 @@
-
+python -m venv venv_gradio
+.\venv_gradio\Scripts\Activate
+python -m pip install -q --upgrade pip
+python -m pip install -qr requirements.txt
