@@ -1,50 +1,44 @@
-import pandas as pd
 import gradio as gr
-from sklearn.ensemble import RandomForestClassifier 
-from sklearn import metrics
+import pandas as pd
 import pickle
 
 def load_ml_components(fp):
     "Load the ml component to reuse in App"
-    with open (fp,"rb") as f:
+    with open(fp, "rb") as f:
         object = pickle.load(f)
     return object
 
-df_1 = pd.read_csv("tel_churn.csv")
-model = pickle.load(open("model.sav", "rb"))
+model = load_ml_components("model.sav")
+pipeline = load_ml_components("pipeline.sav")
 
 def predict(SeniorCitizen, MonthlyCharges, TotalCharges, gender, Partner, Dependents, PhoneService, 
             MultipleLines, InternetService, OnlineSecurity, OnlineBackup, DeviceProtection, TechSupport,
             StreamingTV, StreamingMovies, Contract, PaperlessBilling, PaymentMethod, tenure):
-    
+
     data = [[SeniorCitizen, MonthlyCharges, TotalCharges, gender, Partner, Dependents, PhoneService, 
              MultipleLines, InternetService, OnlineSecurity, OnlineBackup, DeviceProtection, TechSupport,
              StreamingTV, StreamingMovies, Contract, PaperlessBilling, PaymentMethod, tenure]]
-    
+
     new_df = pd.DataFrame(data, columns=['SeniorCitizen', 'MonthlyCharges', 'TotalCharges', 'gender', 
                                          'Partner', 'Dependents', 'PhoneService', 'MultipleLines', 'InternetService',
                                          'OnlineSecurity', 'OnlineBackup', 'DeviceProtection', 'TechSupport',
                                          'StreamingTV', 'StreamingMovies', 'Contract', 'PaperlessBilling',
                                          'PaymentMethod', 'tenure'])
-    
-    df_2 = pd.concat([df_1, new_df], ignore_index=True)
-    
-    # Check for missing values in 'tenure' column
-    if df_2['tenure'].isnull().any():
-        df_2['tenure'].fillna(df_2['tenure'].median(), inplace=True)
-    df_2['tenure'] = df_2['tenure'].astype(int)
+                                         
+    # Process the 'tenure' column
+    if new_df['tenure'].isnull().any():
+        new_df['tenure'].fillna(new_df['tenure'].median(), inplace=True)
+    new_df['tenure'] = new_df['tenure'].astype(int)
 
     labels = ["{0} - {1}".format(i, i + 11) for i in range(1, 72, 12)]
-    df_2['tenure_group'] = pd.cut(df_2['tenure'], range(1, 80, 12), right=False, labels=labels)
-    df_2.drop(columns= ['tenure'], axis=1, inplace=True)   
+    new_df['tenure_group'] = pd.cut(new_df['tenure'], range(1, 80, 12), right=False, labels=labels)
+    new_df.drop(columns=['tenure'], axis=1, inplace=True)
 
-    new_df__dummies = pd.get_dummies(df_2[['gender', 'SeniorCitizen', 'Partner', 'Dependents', 'PhoneService',
-                                           'MultipleLines', 'InternetService', 'OnlineSecurity', 'OnlineBackup',
-                                           'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies',
-                                           'Contract', 'PaperlessBilling', 'PaymentMethod','tenure_group']])
+    # Transforming the data using the pipeline
+    processed_data = pipeline.transform(new_df)
     
-    single = model.predict(new_df__dummies.tail(1))
-    probablity = model.predict_proba(new_df__dummies.tail(1))[:,1]
+    single = model.predict(processed_data)
+    probablity = model.predict_proba(processed_data)[:,1]
     
     if single == 1:
         return "This customer is likely to be churned with a confidence of {:.2f}%".format(probablity*100)
