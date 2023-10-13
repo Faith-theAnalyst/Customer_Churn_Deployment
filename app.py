@@ -5,14 +5,13 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
+# Load model
+with open('Src/rfc.pkl', 'rb') as file:
+    rfc_loaded = pickle.load(file)
 
-def load_model(fp):
-    "Load the model to reuse in App"
-    with open(fp, "rb") as f:
-        model = pickle.load(f)
-    return model
-
-best_model = load_model("Src/churn_model.pkl")
+# Load preprocessor
+with open('Src/preprocessor.pkl', 'rb') as file:
+    preprocessor_loaded = pickle.load(file)
 
 # Creating the preprocessing pipeline
 categorical_features = ['gender', 'Partner', 'Dependents', 'PhoneService', 'MultipleLines', 'InternetService',
@@ -49,42 +48,54 @@ def predict(SeniorCitizen, MonthlyCharges, TotalCharges, gender, Partner, Depend
     new_df['tenure_group'] = pd.cut(new_df['tenure'], range(1, 80, 12), right=False, labels=labels)
     new_df.drop(columns=['tenure'], axis=1, inplace=True)
 
-    processed_data = preprocessor.transform(new_df)
-    single = best_model.predict(processed_data)
-    probablity = best_model.predict_proba(processed_data)[:,1]
+    processed_data = preprocessor_loaded.transform(new_df)
+    single = rfc_loaded.predict(processed_data)
 
     if single == 1:
-        return "This customer is likely to be churned with a confidence of {:.2f}%".format(probablity*100)
+        return "This customer is likely to be churned."
     else:
-        return "This customer is likely to continue with a confidence of {:.2f}%".format(probablity*100)
+        return "This customer is likely to continue."
 
-iface = gr.Interface(
-    fn=predict,
-    inputs=[
+with gr.Blocks(title="Customer Churn Prediction", theme="monochrome") as iface:
+    
+    gr.Label("Customer Churn Prediction")
+    gr.Markdown("# Predict whether a customer is likely to churn.")
+
+    with gr.Row():
         gr.Dropdown(label='SeniorCitizen', choices=[0, 1]),
         gr.Number(label='MonthlyCharges'),
         gr.Number(label='TotalCharges'),
         gr.Dropdown(label='gender', choices=["Male", "Female"]),
-        gr.Dropdown(label='Partner', choices=["Yes", "No"]),
+        gr.Dropdown(label='Partner', choices=["Yes", "No"])
+    
+    with gr.Row():
         gr.Dropdown(label='Dependents', choices=["Yes", "No"]),
         gr.Dropdown(label='PhoneService', choices=["Yes", "No"]),
         gr.Dropdown(label='MultipleLines', choices=["Yes", "No", "No phone service"]),
         gr.Dropdown(label='InternetService', choices=["DSL", "Fiber optic", "No"]),
-        gr.Dropdown(label='OnlineSecurity', choices=["Yes", "No", "No internet service"]),
+        gr.Dropdown(label='OnlineSecurity', choices=["Yes", "No", "No internet service"])
+
+    with gr.Row():
         gr.Dropdown(label='OnlineBackup', choices=["Yes", "No", "No internet service"]),
         gr.Dropdown(label='DeviceProtection', choices=["Yes", "No", "No internet service"]),
         gr.Dropdown(label='TechSupport', choices=["Yes", "No", "No internet service"]),
         gr.Dropdown(label='StreamingTV', choices=["Yes", "No", "No internet service"]),
-        gr.Dropdown(label='StreamingMovies', choices=["Yes", "No", "No internet service"]),
+        gr.Dropdown(label='StreamingMovies', choices=["Yes", "No", "No internet service"])
+    
+    with gr.Row():
         gr.Dropdown(label='Contract', choices=["Month-to-month", "One year", "Two year"]),
         gr.Dropdown(label='PaperlessBilling', choices=["Yes", "No"]),
         gr.Dropdown(label='PaymentMethod', choices=["Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"]),
-        gr.Number(label='tenure: 0-72')
-    ],
-    outputs="text",
-    theme="dark",
-    title="Customer Churn Prediction",
-    description="Predict whether a customer is likely to churn."
-)
+        gr.Slider(minimum=0, maximum=72,  label='tenure: 0-72')
 
-iface.launch(share=True)
+    with gr.Row():
+        pred= gr.Button('Predict')
+
+    output_components = gr.Label(label='Churn') 
+    
+    pred.click(fn=predict,
+            #inputs=input_components,
+            outputs=output_components,
+            )
+
+iface.launch(share=True, debug=True)
