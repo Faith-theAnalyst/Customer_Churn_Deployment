@@ -1,6 +1,6 @@
 # Customer Churn Prediction Web App
 
-![Customer Churn Prediction](Images/churn.jpg)
+![Customer Churn Prediction](Image/churn.jpg)
 
 
 ## Table of Contents
