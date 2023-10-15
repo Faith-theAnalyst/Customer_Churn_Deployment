@@ -6,11 +6,11 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
 # Load model
-with open('Src/churn_model.pkl', 'rb') as file:
+with open('Assets/churn_model.pkl', 'rb') as file:
     rfc_loaded = pickle.load(file)
 
 # Load preprocessor
-with open('Src/churn_pipeline.pkl', 'rb') as file:
+with open('Assets/churn_pipeline.pkl', 'rb') as file:
     preprocessor_loaded = pickle.load(file)
 
 # Creating the preprocessing pipeline
